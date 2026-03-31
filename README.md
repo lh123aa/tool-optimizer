@@ -1,69 +1,117 @@
 # Tool Optimizer MCP Server
 
-一个 MCP 服务器，用于管理、优化和迭代 MCP 工具。支持工具搜索、对比、升级、卸载等操作。
+A Model Context Protocol (MCP) server for managing, optimizing, and iterating MCP tools. Supports tool search, comparison, upgrade, health checking, and more.
 
-## 功能特性
+[中文](./README_zh.md) | [English](./README.md)
 
-- 🔍 **工具搜索** - 在 MCP Registry 中搜索更好的替代工具
-- ⚖️ **工具对比** - 生成详细的评估报告，对比效率、可靠性、功能
-- 🚀 **智能升级** - 安装新工具 → 测试验证 → 自动卸载旧工具
-- 💾 **配置管理** - 自动管理 OpenCode 等 MCP 客户端的配置
-- 📊 **性能监控** - 跟踪工具成功率、执行时间等指标
+---
 
-## 工作流程
+## Features
+
+- 🔍 **Tool Search** - Search for better alternative tools in MCP Registry
+- ⚖️ **Tool Comparison** - Generate detailed evaluation reports comparing efficiency, reliability, and features
+- 🚀 **Smart Upgrade** - Install new tool → Test → Automatically uninstall old tool
+- 💾 **Configuration Management** - Auto-manage configurations for OpenCode and other MCP clients
+- 📊 **Performance Monitoring** - Track success rates, execution times, and other metrics
+- 📝 **Logging System** - Structured logging for debugging and iteration improvements
+- 🔒 **Security First** - Package name validation, command injection prevention
+
+## Architecture
 
 ```
-启动检查                    任务卡点
-   │                          │
-   ▼                          ▼
-评估现有工具 ─────────────────┼──▶ 检测卡点
-   │                          │
-   ▼                          ▼
-提示可升级项 ───────────────▶ 评估是否工具问题
-   │                          │
-   ▼                          ▼
-等待确认 ───────────────────▶ 搜索更强替代工具
-   │                          │
-   ▼                          ▼
-安装新工具 ───────────────────▶ 推荐确认
-   │                          │
-   ▼                          ▼
-评估报告（效率/稳定性） ◀──────┘
-   │
-   ▼
-确认优于旧工具 → 卸载旧工具
+┌─────────────────────────────────────────────────────────┐
+│                    MCP Client                            │
+│  (OpenCode / Claude Desktop / other MCP clients)         │
+└─────────────────────┬───────────────────────────────────┘
+                      │ stdio
+                      ▼
+┌─────────────────────────────────────────────────────────┐
+│              Tool Optimizer MCP Server                   │
+├─────────────────────────────────────────────────────────┤
+│  Tools Layer                                             │
+│  ├── Health Tools (list, health check)                  │
+│  ├── Search Tools (search, find better)                 │
+│  ├── Compare Tools (compare, evaluate upgrade)          │
+│  ├── Upgrade Tools (install, upgrade, uninstall)        │
+│  └── Log Tools (stats, recent, errors)                 │
+├─────────────────────────────────────────────────────────┤
+│  Services Layer                                         │
+│  ├── ConfigService - Configuration management           │
+│  ├── RegistryService - MCP Registry API client          │
+│  ├── EvaluatorService - Tool evaluation & scoring       │
+│  └── LoggerService - Structured logging                │
+├─────────────────────────────────────────────────────────┤
+│  Utils Layer                                            │
+│  ├── PackageValidator - Security validation              │
+│  ├── ErrorUtils - Error handling utilities              │
+│  └── Constants - Magic numbers centralized              │
+└─────────────────────────────────────────────────────────┘
 ```
 
-## 安装
+## Workflow
 
-### 方式一：npm 安装
+```
+Startup Check                 Task Checkpoint
+     │                             │
+     ▼                             ▼
+Evaluate Existing Tools ────────┼──▶ Detect Issues
+     │                             │
+     ▼                             ▼
+Suggest Upgrades ──────────────▶ Assess Tool Problems
+     │                             │
+     ▼                             ▼
+Wait for Confirmation ─────────▶ Search for Alternatives
+     │                             │
+     ▼                             ▼
+Install New Tool ──────────────▶ Confirm Recommendation
+     │                             │
+     ▼                             ▼
+Evaluation Report ◀────────────┘
+     │
+     ▼
+Confirm Better → Uninstall Old Tool
+```
+
+## Installation
+
+### Prerequisites
+
+- Node.js >= 18.0.0
+- npm or yarn
+
+### Build from Source
 
 ```bash
-cd E:\程序\工具迭代\tool-optimizer-mcp
+# Clone the repository
+git clone https://github.com/lh123aa/tool-optimizer.git
+cd tool-optimizer-mcp
+
+# Install dependencies
 npm install
+
+# Build
 npm run build
 ```
 
-### 方式二：全局安装
+### Global Installation
 
 ```bash
 npm install -g tool-optimizer-mcp
 ```
 
-## 配置 MCP 客户端
+## Configuration
 
 ### OpenCode
 
-在 `~/.config/opencode/opencode.json` 中添加：
+Add to `~/.config/opencode/opencode.json`:
 
 ```json
 {
-  "mcp": {
+  "mcpServers": {
     "tool-optimizer": {
       "command": "node",
-      "args": ["E:/程序/工具迭代/tool-optimizer-mcp/dist/index.js"],
-      "enabled": true,
-      "type": "local"
+      "args": ["/path/to/tool-optimizer-mcp/dist/index.js"],
+      "env": {}
     }
   }
 }
@@ -71,151 +119,213 @@ npm install -g tool-optimizer-mcp
 
 ### Claude Desktop
 
-在 `~/AppData/Roaming/Claude/claude_desktop_config.json` 中添加：
+Add to `~/AppData/Roaming/Claude/claude_desktop_config.json`:
 
 ```json
 {
   "mcpServers": {
     "tool-optimizer": {
       "command": "node",
-      "args": ["E:/程序/工具迭代/tool-optimizer-mcp/dist/index.js"]
+      "args": ["C:/path/to/tool-optimizer-mcp/dist/index.js"]
     }
   }
 }
 ```
 
-### 其他 MCP 客户端
+## Available Tools
+
+### Health Tools
+
+| Tool | Description |
+|------|-------------|
+| `tool_list` | List all installed tools |
+| `tool_health` | Check health status of a single tool |
+| `tool_health_all` | Check health status of all tools |
+
+### Search Tools
+
+| Tool | Description |
+|------|-------------|
+| `tool_search` | Search MCP Registry |
+| `tool_find_better` | Find better alternatives |
+| `tool_categories` | List tool categories |
+| `tool_popular` | List popular tools |
+
+### Compare Tools
+
+| Tool | Description |
+|------|-------------|
+| `tool_compare` | Compare two tools |
+| `tool_evaluate_upgrade` | Evaluate upgrade recommendation |
+
+### Upgrade Tools
+
+| Tool | Description |
+|------|-------------|
+| `tool_install` | Install a new tool |
+| `tool_upgrade` | Upgrade (install + test + uninstall old) |
+| `tool_uninstall` | Uninstall a tool |
+| `tool_rollback` | Rollback to previous version |
+| `tool_archive_list` | List archived tools |
+
+### Log Tools
+
+| Tool | Description |
+|------|-------------|
+| `tool_log_stats` | Get log statistics |
+| `tool_log_recent` | Get recent logs |
+| `tool_log_errors` | Get error logs |
+| `tool_log_tool` | Get logs for specific tool |
+| `tool_log_search` | Search logs |
+| `tool_log_info` | Get logging system info |
+
+## Usage Examples
+
+### Search for Tools
+
+```javascript
+// Search MCP Registry
+const results = await tool_search({
+  query: "browser automation",
+  category: "browser",
+  limit: 10
+});
+
+// Find better alternatives
+const alternatives = await tool_find_better({
+  toolName: "chrome-devtools",
+  limit: 5
+});
+```
+
+### Compare and Upgrade
+
+```javascript
+// Compare tools
+const report = await tool_compare({
+  toolName: "chrome-devtools",
+  candidateName: "microsoft/playwright-mcp"
+});
+
+// Evaluate upgrade
+const evaluation = await tool_evaluate_upgrade({
+  toolName: "chrome-devtools",
+  candidateName: "microsoft/playwright-mcp"
+});
+
+// Perform upgrade
+const result = await tool_upgrade({
+  toolName: "chrome-devtools",
+  candidateName: "microsoft/playwright-mcp",
+  confirm: true
+});
+```
+
+### Health Check
+
+```javascript
+// List all tools
+const tools = await tool_list();
+
+// Check specific tool
+const health = await tool_health({
+  toolName: "chrome-devtools"
+});
+
+// Check all tools
+const allHealth = await tool_health_all();
+```
+
+## Evaluation Report
 
 ```json
 {
-  "mcpServers": {
-    "tool-optimizer": {
-      "command": "node",
-      "args": ["<安装路径>/dist/index.js"]
-    }
-  }
-}
-```
-
-## 使用方法
-
-### 健康检查
-
-```javascript
-// 列出所有已安装工具
-tool_list()
-
-// 检查单个工具健康状态
-tool_health({ toolName: "chrome-devtools" })
-
-// 检查所有工具健康状态
-tool_health_all()
-```
-
-### 搜索工具
-
-```javascript
-// 搜索 MCP Registry
-tool_search({ query: "browser automation", limit: 10 })
-
-// 查找当前工具的更好替代
-tool_find_better({ toolName: "chrome-devtools", limit: 5 })
-
-// 获取热门工具
-tool_popular({ limit: 10 })
-```
-
-### 对比工具
-
-```javascript
-// 对比当前工具和候选工具
-tool_compare({
-  toolName: "chrome-devtools",
-  candidateName: "microsoft/playwright-mcp"
-})
-
-// 获取升级建议
-tool_evaluate_upgrade({
-  toolName: "chrome-devtools",
-  candidateName: "microsoft/playwright-mcp"
-})
-```
-
-### 升级工具
-
-```javascript
-// 安装新工具
-tool_install({
-  candidateName: "microsoft/playwright-mcp",
-  confirm: true
-})
-
-// 升级（安装 + 测试 + 卸载旧工具）
-tool_upgrade({
-  toolName: "chrome-devtools",
-  candidateName: "microsoft/playwright-mcp",
-  confirmed: true
-})
-
-// 卸载工具
-tool_uninstall({
-  toolName: "chrome-devtools",
-  confirm: true
-})
-
-// 回滚到旧版本
-tool_rollback({
-  toolName: "chrome-devtools",
-  confirm: true
-})
-```
-
-## 数据存储
-
-工具信息和配置存储在：
-- Windows: `C:\Users\<用户名>\.tool-optimizer-mcp\`
-- macOS: `~/.tool-optimizer-mcp/`
-- Linux: `~/.tool-optimizer-mcp/`
-
-包含文件：
-- `tools.json` - 已安装工具列表
-- `archive.json` - 已归档的旧工具
-- `metrics.json` - 性能指标
-- `config.json` - 系统配置
-
-## 评估报告示例
-
-```json
-{
-  "id": "uuid",
+  "id": "eval_xxx-xxx",
   "createdAt": "2024-01-01T00:00:00.000Z",
-  "oldTool": { "name": "chrome-devtools" },
-  "newTool": { "name": "playwright-mcp", "stars": 30039 },
-  "efficiencyScore": 85,
-  "reliabilityScore": 78,
-  "featureScore": 82,
-  "overallScore": 82,
+  "oldTool": {
+    "name": "chrome-devtools",
+    "version": "1.0.0"
+  },
+  "newTool": {
+    "name": "microsoft/playwright-mcp",
+    "stars": 30039,
+    "forks": 5231
+  },
+  "scores": {
+    "efficiency": 85,
+    "reliability": 78,
+    "features": 82,
+    "overall": 82
+  },
   "recommendation": "upgrade",
-  "reason": "综合得分 82/100，建议升级"
+  "reason": "Overall score 82/100, recommended to upgrade"
 }
 ```
 
-## 开发
+## Data Storage
+
+Data is stored in `~/.tool-optimizer-mcp/`:
+
+| File | Description |
+|------|-------------|
+| `tools.json` | Installed tools list |
+| `archive.json` | Archived old tools |
+| `metrics.json` | Performance metrics |
+| `config.json` | System configuration |
+| `logs/` | Structured logs |
+
+## Development
 
 ```bash
-# 安装依赖
+# Install dependencies
 npm install
 
-# 开发模式（热重载）
+# Development mode (hot reload)
 npm run dev
 
-# 构建
+# Build
 npm run build
 
-# 清理
+# Run tests
+npm test
+
+# Run tests with coverage
+npm run test:coverage
+
+# Lint
+npm run lint
+
+# Format code
+npm run format
+
+# Clean build
 npm run clean
 ```
 
-## 许可证
+## Security
+
+- **Package Validation**: All npm package names are validated before installation
+- **Command Injection Prevention**: Uses array-form `spawnSync` parameters
+- **Input Sanitization**: Zod schema validation for all tool inputs
+- **Secure Logging**: Sensitive data is not logged
+
+## Testing
+
+```bash
+# Run all tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Generate coverage report
+npm run test:coverage
+```
+
+## License
 
 MIT
+
+## Contributing
+
+Contributions are welcome! Please read the [AGENTS.md](./AGENTS.md) for development guidelines.
