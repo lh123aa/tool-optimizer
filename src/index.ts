@@ -19,6 +19,7 @@ import { registerSearchTools } from "./tools/search.js";
 import { registerCompareTools } from "./tools/compare.js";
 import { registerUpgradeTools } from "./tools/upgrade.js";
 import { registerLogTools } from "./tools/logs.js";
+import { registerDiagnoseTools } from "./tools/diagnose.js";
 
 // 导入服务
 import { configService } from "./services/config.js";
@@ -51,6 +52,7 @@ async function main() {
   registerCompareTools(server);
   registerUpgradeTools(server);
   registerLogTools(server);
+  registerDiagnoseTools(server);
 
   // 添加工具列表快捷查询
   server.tool(
@@ -111,6 +113,21 @@ async function main() {
                       "tool_log_tool - 获取工具日志",
                       "tool_log_search - 搜索日志",
                       "tool_log_info - 获取日志系统信息",
+                    ],
+                  },
+                  diagnose: {
+                    description: "工具诊断 (手动/自动双模式)",
+                    mode: "manual | auto | both",
+                    commands: [
+                      "tool_diagnose - 手动触发诊断",
+                      "tool_diagnose_auto - 自动诊断(任务失败时)",
+                      "tool_check_diagnose_keyword - 检查诊断关键词",
+                      "tool_set_diagnose_mode - 设置诊断模式",
+                      "tool_get_diagnose_config - 获取诊断配置",
+                    ],
+                    manualTriggers: [
+                      "升级工具", "检测工具", "替代工具", "更换工具",
+                      "工具问题", "工具出错", "换个工具", "更好的工具",
                     ],
                   },
                 },

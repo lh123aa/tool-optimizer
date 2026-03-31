@@ -134,6 +134,134 @@ export interface ArchivedTool {
   performanceSnapshot?: ToolPerformance;
 }
 
+// ============== 诊断类型 ==============
+
+/**
+ * 诊断模式
+ */
+export type DiagnoseMode = 
+  | "manual"          // 手动触发 - 用户主动说"升级工具"等
+  | "auto"            // 自动触发 - 任务失败时自动诊断
+  | "both";           // 两种模式都启用
+
+/**
+ * 诊断触发条件
+ */
+export type DiagnoseTrigger = 
+  | "manual_keyword"      // 手动：关键词触发
+  | "task_stuck"          // 自动：任务卡住
+  | "tool_failed"         // 自动：工具失败
+  | "scheduled";         // 自动：定时检测
+
+/**
+ * 诊断结果状态
+ */
+export type DiagnoseStatus = 
+  | "analyzing"      // 分析中
+  | "tool_healthy"   // 工具正常
+  | "tool_problem"   // 工具问题
+  | "unknown_cause"; // 原因不明
+
+/**
+ * 诊断结果
+ */
+export interface DiagnoseResult {
+  id: string;                        // 诊断 ID
+  mode: DiagnoseMode;                // 触发模式
+  trigger: DiagnoseTrigger;           // 触发条件
+  status: DiagnoseStatus;            // 诊断状态
+  
+  // 分析信息
+  taskContext?: string;              // 任务上下文
+  errorContext?: string;              // 错误上下文
+  
+  // 工具分析结果
+  analyzedTools: AnalyzedTool[];
+  
+  // 问题工具（如果有）
+  problemTools: ProblemTool[];
+  
+  // 推荐的替代工具
+  candidates: ToolCandidate[];
+  
+  // 生成时间
+  createdAt: string;
+  
+  // 诊断摘要
+  summary: string;
+  isToolIssue: boolean;              // 是否是工具问题
+  confidence: number;                 // 诊断置信度 (0-1)
+}
+
+/**
+ * 被分析的工具
+ */
+export interface AnalyzedTool {
+  name: string;
+  healthStatus: "healthy" | "degraded" | "unhealthy" | "unknown";
+  performance?: ToolPerformance;
+  issueIndicators: string[];         // 问题指标
+  lastError?: string;                // 最后错误
+}
+
+/**
+ * 有问题的工具
+ */
+export interface ProblemTool {
+  name: string;
+  severity: "critical" | "high" | "medium" | "low";
+  symptoms: string[];                // 症状描述
+  possibleCauses: string[];          // 可能原因
+  recommendations: string[];         // 建议
+}
+
+/**
+ * 诊断报告（用于用户确认）
+ */
+export interface DiagnoseReport {
+  diagnoseId: string;
+  
+  // 概览
+  isToolIssue: boolean;
+  summary: string;
+  confidence: number;
+  
+  // 问题详情
+  problems: ProblemTool[];
+  
+  // 替代方案
+  alternatives: AlternativeCandidate[];
+  
+  // 下一步建议
+  suggestedAction: "upgrade" | "keep" | "investigate" | "none";
+  
+  // 用户确认信息
+  requireConfirm: boolean;
+  confirmMessage?: string;
+}
+
+/**
+ * 替代方案候选
+ */
+export interface AlternativeCandidate {
+  candidate: ToolCandidate;
+  evaluationReport: EvaluationReport;
+  benefits: string[];
+  risks: string[];
+  compatibility: string;
+}
+
+/**
+ * 诊断参数
+ */
+export interface DiagnoseParams {
+  mode: DiagnoseMode;                        // 诊断模式
+  taskContext?: string;                      // 任务上下文（可选）
+  errorContext?: string;                     // 错误上下文（可选）
+  specificTool?: string;                     // 指定工具（可选）
+  limit?: number;                            // 搜索候选数量限制
+}
+
 // ============== 触发事件 ==============
 
 /**
@@ -143,7 +271,8 @@ export type TriggerEvent =
   | { type: "startup" }                                    // 系统启动
   | { type: "task_stuck"; task: string; error?: string }   // 任务卡住
   | { type: "tool_failed"; tool: string; error: string }   // 工具失败
-  | { type: "manual"; query: string };                      // 手动触发
+  | { type: "manual"; query: string }                       // 手动触发
+  | { type: "diagnose"; mode: DiagnoseMode; context?: string }; // 诊断触发
 
 /**
  * 建议操作
@@ -186,6 +315,18 @@ export interface SystemConfig {
     enabled: boolean;
     checkIntervalMs: number;       // 检查间隔 (毫秒)
     trackPerformance: boolean;     // 是否跟踪性能
+  };
+  
+  // 诊断配置
+  diagnose: {
+    enabled: boolean;             // 是否启用诊断功能
+    mode: DiagnoseMode;           // 诊断模式: manual/auto/both
+    autoTriggers: {
+      taskStuck: boolean;         // 任务卡住时自动诊断
+      toolFailed: boolean;        // 工具失败时自动诊断
+      scheduled: boolean;         // 定时诊断
+    };
+    minConfidence: number;        // 最小置信度 (0-1)
   };
   
   // 评估配置

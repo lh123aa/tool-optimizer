@@ -282,6 +282,16 @@ export class ConfigService {
         checkIntervalMs: 1000 * 60 * 60, // 1 小时
         trackPerformance: true,
       },
+      diagnose: {
+        enabled: true,
+        mode: "manual", // 默认手动模式，只有用户说"升级工具"时才检测
+        autoTriggers: {
+          taskStuck: false,       // 任务卡住时不自自动诊断（除非明确开启）
+          toolFailed: false,      // 工具失败时不自动诊断
+          scheduled: false,       // 不使用定时诊断
+        },
+        minConfidence: 0.7,      // 最小置信度 70%
+      },
       evaluation: {
         minScoreDiff: 10, // 分数差大于 10 才建议升级
         requireUserConfirm: true,
@@ -548,6 +558,57 @@ export class ConfigService {
    */
   updateSystemConfig(updates: Partial<SystemConfig>): void {
     this.config = { ...this.config, ...updates };
+    this.saveConfigAsync();
+  }
+
+  // ============== 诊断配置访问 ==============
+
+  /**
+   * 获取诊断模式
+   */
+  getDiagnoseMode(): "manual" | "auto" | "both" {
+    return this.config.diagnose.mode;
+  }
+
+  /**
+   * 检查是否启用诊断功能
+   */
+  isDiagnoseEnabled(): boolean {
+    return this.config.diagnose.enabled;
+  }
+
+  /**
+   * 检查是否允许自动触发诊断
+   */
+  isAutoDiagnoseEnabled(): boolean {
+    return this.config.diagnose.enabled && 
+           (this.config.diagnose.mode === "auto" || this.config.diagnose.mode === "both");
+  }
+
+  /**
+   * 检查是否允许手动触发诊断
+   */
+  isManualDiagnoseEnabled(): boolean {
+    return this.config.diagnose.enabled && 
+           (this.config.diagnose.mode === "manual" || this.config.diagnose.mode === "both");
+  }
+
+  /**
+   * 设置诊断模式
+   */
+  setDiagnoseMode(mode: "manual" | "auto" | "both"): void {
+    this.config.diagnose.mode = mode;
+    this.saveConfigAsync();
+  }
+
+  /**
+   * 更新诊断自动触发配置
+   */
+  updateAutoDiagnoseTriggers(triggers: Partial<SystemConfig["diagnose"]["autoTriggers"]>): void {
+    this.config.diagnose.autoTriggers = {
+      ...this.config.diagnose.autoTriggers,
+      ...triggers,
+    };
     this.saveConfigAsync();
   }
 

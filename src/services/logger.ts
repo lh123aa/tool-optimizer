@@ -33,6 +33,7 @@ export enum LogCategory {
   SEARCH = "search",                       // 搜索相关
   COMPARE = "compare",                     // 对比相关
   HEALTH = "health",                       // 健康检查
+  DIAGNOSE = "diagnose",                   // 诊断相关
   REGISTRY = "registry",                   // Registry API
   CONFIG = "config",                       // 配置相关
   SYSTEM = "system",                       // 系统相关
