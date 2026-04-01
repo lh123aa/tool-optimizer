@@ -11,7 +11,7 @@
  */
 
 import { randomUUID } from "crypto";
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { configService } from "../services/config.js";
 import { registryService } from "../services/registry.js";
@@ -328,7 +328,7 @@ async function performDiagnosis(options: DiagnoseOptions): Promise<DiagnoseResul
 
     // 检测最后错误（如果有）
     let lastError: string | undefined;
-    if (errorContext && tool.name.toLowerCase().includes(tool.name.toLowerCase())) {
+    if (errorContext && errorContext.toLowerCase().includes(tool.name.toLowerCase())) {
       lastError = errorContext;
       issueIndicators.push("近期有执行失败");
     }

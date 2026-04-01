@@ -3,9 +3,9 @@
  * 查询系统运行日志，用于问题排查和迭代升级
  */
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { loggerService, LogLevel, LogCategory } from "../services/logger.js";
+import { loggerService, LogLevel } from "../services/logger.js";
 
 /**
  * 级别名称到枚举的映射

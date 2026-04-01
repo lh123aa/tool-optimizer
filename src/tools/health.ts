@@ -3,7 +3,7 @@
  * 检查已安装工具的状态和性能
  */
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { configService } from "../services/config.js";
 import { loggerService, LogCategory } from "../services/logger.js";

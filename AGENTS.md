@@ -2,11 +2,12 @@
 
 ## Project Overview
 
-**tool-optimizer-mcp** is an MCP (Model Context Protocol) server for managing, optimizing, and iterating MCP tools. It supports tool search, comparison, upgrade, and health checking.
+**tool-optimizer-mcp** is an MCP (Model Context Protocol) server for managing, optimizing, and iterating MCP tools. It supports tool search, comparison, upgrade, health checking, and diagnostics.
 
 - **Location**: `tool-optimizer-mcp/`
 - **Language**: TypeScript (ESM)
 - **Runtime**: Node.js >= 18.0.0
+- **Test Framework**: Vitest
 
 ---
 
@@ -27,9 +28,31 @@ npm start
 
 # Clean build artifacts
 npm run clean
-```
 
-**Note**: No ESLint, Prettier, or Jest configured. TypeScript's strict mode is enabled.
+# Lint (ESLint + Prettier)
+npm run lint
+
+# Auto-fix lint issues
+npm run lint:fix
+
+# Format code (Prettier)
+npm run format
+
+# Run tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with coverage
+npm run test:coverage
+
+# Run a single test file
+npx vitest run tests/services/config.test.ts
+
+# Run tests matching a pattern
+npx vitest run --grep "getAllTools"
+```
 
 ---
 
@@ -46,11 +69,12 @@ npm run clean
   ```typescript
   import { registryService } from "./services/registry.js";
   ```
-- **Group imports**: External packages first, then internal modules
+- **Group imports**: External packages first, then internal modules:
   ```typescript
   import axios from "axios";
   import type { ToolCandidate } from "../types/index.js";
   ```
+- **Use `import type`** for type-only imports (enforced by ESLint)
 
 ### Naming Conventions
 | Element | Convention | Example |
@@ -60,14 +84,33 @@ npm run clean
 | Classes | PascalCase | `RegistryService`, `EvaluatorService` |
 | Private methods | camelCase | `loadTools()`, `saveArchive()` |
 | Variables | camelCase | `currentTool`, `candidateName` |
-| Constants | camelCase | `REGISTRY_API_BASE`, `CACHE_TTL` |
+| Constants | UPPER_SNAKE_CASE | `MAX_RETRIES`, `API_TIMEOUT_MS` |
 
 ### TypeScript Rules
-- **Strict mode enabled**: No implicit any, strict null checks
-- **Use `interface`** for object shapes, `type` for unions/primitives
+- **Use `interface`** for object shapes (enforced by ESLint)
+- **Use `import type`** for type-only imports (enforced by ESLint)
 - **Use `z.object()`** for MCP tool input schemas (Zod validation)
 - **Use `unknown`** instead of `any` when type is uncertain
-- **Use `import type`** for type-only imports
+- **No `any`**: ESLint warns on `any` type
+- **No non-null assertion**: ESLint warns on `!` operator
+
+### ESLint Rules (.eslintrc.js)
+- `@typescript-eslint/consistent-type-imports`: Error - prefer `import type`
+- `@typescript-eslint/consistent-type-definitions`: Error - use `interface`
+- `@typescript-eslint/no-unused-vars`: Warn (ignore `_` prefix)
+- `@typescript-eslint/no-explicit-any`: Warn
+- `@typescript-eslint/no-non-null-assertion`: Warn
+- `no-console`: Warn (allow `warn`, `error`)
+
+### Prettier Formatting (.prettierrc)
+- **Semi**: `true`
+- **Single quote**: `true`
+- **Tab width**: `2`
+- **Trailing comma**: `es5`
+- **Print width**: `100`
+- **Bracket spacing**: `true`
+- **Arrow parens**: `always`
+- **End of line**: `lf`
 
 ### Error Handling
 ```typescript
@@ -86,11 +129,11 @@ try {
   JSON.stringify(data, null, 2)
   ```
 
-### Class Patterns
+### Class Patterns (Singleton Export)
 ```typescript
-export class ServiceClass {
+export class RegistryService {
   private cache: Map<string, Data> = new Map();
-  private readonly CONSTANT = 1000;
+  private readonly CACHE_TTL: number;
 
   constructor() {
     // initialization
@@ -106,7 +149,27 @@ export class ServiceClass {
 }
 
 // Singleton export
-export const serviceInstance = new ServiceClass();
+export const registryService = new RegistryService();
+```
+
+### Logger Service Pattern
+Use the logger service instead of `console.log`:
+```typescript
+import { loggerService, LogCategory } from "./services/logger.js";
+
+// Info log
+loggerService.info(LogCategory.SEARCH, `Search completed`, {
+  context: { query, resultCount },
+  duration: Date.now() - startTime,
+  success: true,
+});
+
+// Error log
+loggerService.error(LogCategory.SEARCH, `Search failed`, {
+  error: error as Error,
+  duration: Date.now() - startTime,
+  success: false,
+});
 ```
 
 ### MCP Tool Registration
@@ -114,25 +177,31 @@ export const serviceInstance = new ServiceClass();
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
-export function registerTools(server: McpServer): void {
+export function registerSearchTools(server: McpServer): void {
   server.registerTool(
-    "tool_name",
+    "tool_search",
     {
-      description: "Tool description",
+      description: "Search MCP tools in registry",
       inputSchema: z.object({
-        param: z.string().describe("Description"),
+        query: z.string().describe("Search query"),
+        limit: z.number().optional().default(10).describe("Result limit"),
       }),
     },
-    async ({ param }) => {
+    async ({ query, limit = 10 }) => {
       try {
-        // implementation
-        return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+        const result = await doSearch(query, limit);
+        return {
+          content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+        };
       } catch (error) {
         return {
           content: [{
             type: "text",
-            text: JSON.stringify({ error: "message", message: error instanceof Error ? error.message : String(error) })
-          }]
+            text: JSON.stringify({
+              error: "search_failed",
+              message: error instanceof Error ? error.message : String(error),
+            }),
+          }],
         };
       }
     }
@@ -145,19 +214,35 @@ export function registerTools(server: McpServer): void {
 ## Project Structure
 
 ```
-src/
-├── index.ts           # Main entry, MCP server setup
-├── types/
-│   └── index.ts       # All TypeScript interfaces and types
-├── tools/
-│   ├── health.ts      # Health check tools
-│   ├── search.ts      # Search tools
-│   ├── compare.ts     # Comparison tools
-│   └── upgrade.ts     # Upgrade/install tools
-└── services/
-    ├── registry.ts    # MCP Registry API client
-    ├── evaluator.ts    # Tool evaluation logic
-    └── config.ts       # Config file management
+tool-optimizer-mcp/
+├── src/
+│   ├── index.ts              # Main entry, MCP server setup
+│   ├── types/
+│   │   └── index.ts         # All TypeScript interfaces and types
+│   ├── tools/
+│   │   ├── health.ts        # Health check tools (tool_list, tool_health)
+│   │   ├── search.ts        # Search tools (tool_search, tool_find_better)
+│   │   ├── compare.ts       # Comparison tools (tool_compare)
+│   │   ├── upgrade.ts       # Upgrade/install tools (tool_install, tool_upgrade)
+│   │   ├── diagnose.ts      # Diagnostic tools (tool_diagnose, tool_diagnose_auto)
+│   │   └── logs.ts          # Log query tools
+│   ├── services/
+│   │   ├── registry.ts      # MCP Registry API client (GitHub fallback)
+│   │   ├── evaluator.ts     # Tool evaluation logic
+│   │   ├── config.ts        # Config file management
+│   │   └── logger.ts        # Structured logging service
+│   └── utils/
+│       ├── constants.ts      # Application constants
+│       ├── error-utils.ts    # Error handling utilities
+│       └── package-validator.ts
+├── tests/                   # Vitest test files
+│   ├── services/
+│   └── utils/
+├── vitest.config.ts         # Vitest configuration
+├── tsconfig.json
+├── .eslintrc.js
+├── .prettierrc
+└── package.json
 ```
 
 ---
@@ -167,6 +252,24 @@ src/
 - `@modelcontextprotocol/sdk` - MCP server SDK
 - `axios` - HTTP client for registry API
 - `zod` - Schema validation for tool inputs
+
+---
+
+## Test Conventions
+
+```typescript
+import { describe, it, expect } from "vitest";
+import { configService } from "../../src/services/config.js";
+
+describe("ConfigService", () => {
+  describe("getAllTools", () => {
+    it("should return an array", () => {
+      const result = configService.getAllTools();
+      expect(Array.isArray(result)).toBe(true);
+    });
+  });
+});
+```
 
 ---
 

@@ -18,7 +18,6 @@ import type {
   EvaluatedTool,
   ToolPerformance,
 } from "../types/index.js";
-import { configService } from "./config.js";
 import {
   SCORE_WEIGHTS,
   STAR_THRESHOLDS,

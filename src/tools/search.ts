@@ -3,7 +3,7 @@
  * 在 MCP Registry 中搜索更好的替代工具
  */
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { registryService } from "../services/registry.js";
 import { configService } from "../services/config.js";

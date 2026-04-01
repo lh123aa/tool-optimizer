@@ -3,7 +3,7 @@
  * 对比两个工具并生成评估报告
  */
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { configService } from "../services/config.js";
 import { registryService } from "../services/registry.js";

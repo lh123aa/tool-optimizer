@@ -9,7 +9,7 @@
  */
 
 import { spawnSync } from "child_process";
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { configService } from "../services/config.js";
 import { registryService } from "../services/registry.js";
@@ -141,7 +141,7 @@ export function registerUpgradeTools(server: McpServer): void {
         }
 
         // 执行安装
-        const installResult = await safeInstall(candidate.npmPackage, candidate.dockerImage);
+        const installResult = safeInstall(candidate.npmPackage, candidate.dockerImage);
 
         if (!installResult.success) {
           loggerService.error(LogCategory.INSTALL, `安装失败: ${candidateName}`, {
@@ -178,7 +178,7 @@ export function registerUpgradeTools(server: McpServer): void {
 
         // 保存到配置
         configService.setTool(newTool);
-        configService.addToolToOpenCode(candidate.name, newTool);
+        void configService.addToolToOpenCode(candidate.name, newTool);
 
         loggerService.info(LogCategory.INSTALL, `安装成功: ${candidate.name}`, {
           toolName: candidate.name,
@@ -315,7 +315,7 @@ export function registerUpgradeTools(server: McpServer): void {
 
         // 确认后执行升级
         // 1. 先安装新工具
-        const installResult = await installCandidateTool(candidate);
+        const installResult = installCandidateTool(candidate);
         if (!installResult.success) {
           return {
             content: [
@@ -366,7 +366,7 @@ export function registerUpgradeTools(server: McpServer): void {
         }
 
         // 4. 从 MCP 配置中移除旧工具
-        configService.removeToolFromOpenCode(toolName);
+        void configService.removeToolFromOpenCode(toolName);
 
         loggerService.info(LogCategory.UPGRADE, `升级成功: ${toolName} -> ${candidate.name}`, {
           toolName,
@@ -494,7 +494,7 @@ export function registerUpgradeTools(server: McpServer): void {
         }
 
         // 从 MCP 配置移除
-        configService.removeToolFromOpenCode(toolName);
+        void configService.removeToolFromOpenCode(toolName);
 
         // 安全卸载 npm 包
         if (tool.args && tool.args[0] === "-y") {
@@ -641,7 +641,7 @@ export function registerUpgradeTools(server: McpServer): void {
         }
 
         // 添加回 MCP 配置
-        configService.addToolToOpenCode(toolName, restored);
+        void configService.addToolToOpenCode(toolName, restored);
 
         loggerService.info(LogCategory.UPGRADE, `回滚成功: ${toolName}`, {
           toolName,
@@ -725,10 +725,10 @@ export function registerUpgradeTools(server: McpServer): void {
  * 安全的安装函数
  * 使用 spawnSync 数组形式参数避免 shell 注入
  */
-async function safeInstall(
+function safeInstall(
   npmPackage?: string,
   dockerImage?: string
-): Promise<{ success: boolean; output?: string; error?: string }> {
+): { success: boolean; output?: string; error?: string } {
   try {
     if (npmPackage) {
       // npm 安装 - 使用数组形式避免注入
@@ -768,12 +768,12 @@ async function safeInstall(
 /**
  * 安装候选工具 (内部使用)
  */
-async function installCandidateTool(candidate: {
+function installCandidateTool(candidate: {
   name: string;
   npmPackage?: string;
   dockerImage?: string;
-}): Promise<{ success: boolean; newTool?: InstalledTool; error?: string }> {
-  const installResult = await safeInstall(candidate.npmPackage, candidate.dockerImage);
+}): { success: boolean; newTool?: InstalledTool; error?: string } {
+  const installResult = safeInstall(candidate.npmPackage, candidate.dockerImage);
 
   if (!installResult.success) {
     return { success: false, error: installResult.error };
@@ -791,7 +791,7 @@ async function installCandidateTool(candidate: {
   };
 
   configService.setTool(newTool);
-  configService.addToolToOpenCode(candidate.name, newTool);
+  void configService.addToolToOpenCode(candidate.name, newTool);
 
   return { success: true, newTool };
 }

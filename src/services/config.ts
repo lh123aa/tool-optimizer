@@ -17,8 +17,7 @@ import type {
   InstalledTool, 
   ArchivedTool, 
   ToolPerformance, 
-  SystemConfig,
-  ToolCandidate 
+  SystemConfig
 } from "../types/index.js";
 
 /**
@@ -75,7 +74,7 @@ export class ConfigService {
     this.ensureDataDirSync();
     this.config = this.getDefaultConfig();
     // 初始化时不需要等待加载
-    this.load().catch(err => console.error("初始化加载失败:", err));
+    void this.load().catch((err: Error) => console.error("初始化加载失败:", err.message));
   }
 
   /**
@@ -128,7 +127,7 @@ export class ConfigService {
       promises.push(
         this.writeFileSafe(filePath, lastWrite.data)
           .then(() => lastWrite.resolve())
-          .catch(err => lastWrite.reject(err))
+          .catch((err: unknown) => lastWrite.reject(err instanceof Error ? err : new Error(String(err))))
       );
     }
 
@@ -137,7 +136,7 @@ export class ConfigService {
 
     // 如果队列还有剩余，继续处理
     if (this.writeQueue.length > 0) {
-      this.processWriteQueue();
+      void this.processWriteQueue();
     }
   }
 
@@ -152,7 +151,7 @@ export class ConfigService {
       }
       await writeFile(filePath, JSON.stringify(data, null, 2), "utf-8");
     } catch (error) {
-      console.error(`写入文件失败 ${filePath}:`, error);
+      console.error(`写入文件失败 ${filePath}:`, error instanceof Error ? error.message : String(error));
       throw error;
     }
   }
@@ -170,7 +169,7 @@ export class ConfigService {
   private enqueueWrite(filePath: string, data: unknown): Promise<void> {
     return new Promise((resolve, reject) => {
       this.writeQueue.push({ filePath, data, resolve, reject });
-      this.processWriteQueue();
+      void this.processWriteQueue();
     });
   }
 
@@ -192,7 +191,7 @@ export class ConfigService {
   private async loadTools(): Promise<void> {
     try {
       if (existsSync(TOOLS_FILE)) {
-        const data = JSON.parse(await readFile(TOOLS_FILE, "utf-8"));
+        const data = JSON.parse(await readFile(TOOLS_FILE, "utf-8")) as Record<string, InstalledTool>;
         this.tools = new Map(Object.entries(data));
       }
     } catch (error) {
@@ -204,7 +203,7 @@ export class ConfigService {
    * 保存已安装工具到文件 (异步批量写入)
    */
   private saveToolsAsync(): void {
-    this.enqueueWrite(TOOLS_FILE, Object.fromEntries(this.tools));
+    void this.enqueueWrite(TOOLS_FILE, Object.fromEntries(this.tools));
   }
 
   /**
@@ -213,7 +212,7 @@ export class ConfigService {
   private async loadArchive(): Promise<void> {
     try {
       if (existsSync(ARCHIVE_FILE)) {
-        const data = JSON.parse(await readFile(ARCHIVE_FILE, "utf-8"));
+        const data = JSON.parse(await readFile(ARCHIVE_FILE, "utf-8")) as Record<string, ArchivedTool>;
         this.archive = new Map(Object.entries(data));
       }
     } catch (error) {
@@ -225,7 +224,7 @@ export class ConfigService {
    * 保存归档工具到文件 (异步批量写入)
    */
   private saveArchiveAsync(): void {
-    this.enqueueWrite(ARCHIVE_FILE, Object.fromEntries(this.archive));
+    void this.enqueueWrite(ARCHIVE_FILE, Object.fromEntries(this.archive));
   }
 
   /**
@@ -234,7 +233,7 @@ export class ConfigService {
   private async loadMetrics(): Promise<void> {
     try {
       if (existsSync(METRICS_FILE)) {
-        const data = JSON.parse(await readFile(METRICS_FILE, "utf-8"));
+        const data = JSON.parse(await readFile(METRICS_FILE, "utf-8")) as Record<string, ToolPerformance>;
         this.metrics = new Map(Object.entries(data));
       }
     } catch (error) {
@@ -246,7 +245,7 @@ export class ConfigService {
    * 保存性能指标 (异步批量写入)
    */
   private saveMetricsAsync(): void {
-    this.enqueueWrite(METRICS_FILE, Object.fromEntries(this.metrics));
+    void this.enqueueWrite(METRICS_FILE, Object.fromEntries(this.metrics));
   }
 
   /**
@@ -255,7 +254,7 @@ export class ConfigService {
   private async loadConfigFile(): Promise<void> {
     try {
       if (existsSync(CONFIG_FILE)) {
-        const loaded = JSON.parse(await readFile(CONFIG_FILE, "utf-8"));
+        const loaded = JSON.parse(await readFile(CONFIG_FILE, "utf-8")) as Partial<SystemConfig>;
         this.config = { ...this.getDefaultConfig(), ...loaded };
         return;
       }
@@ -269,7 +268,7 @@ export class ConfigService {
    * 保存系统配置 (异步批量写入)
    */
   private saveConfigAsync(): void {
-    this.enqueueWrite(CONFIG_FILE, this.config);
+    void this.enqueueWrite(CONFIG_FILE, this.config);
   }
 
   /**
@@ -453,7 +452,7 @@ export class ConfigService {
   private async readMCPConfigAsync(path: string): Promise<MCPConfig> {
     try {
       if (existsSync(path)) {
-        return JSON.parse(await readFile(path, "utf-8"));
+        return JSON.parse(await readFile(path, "utf-8")) as MCPConfig;
       }
     } catch (error) {
       console.warn(`读取配置文件失败 ${path}:`, error);
@@ -472,7 +471,7 @@ export class ConfigService {
       }
       await writeFile(path, JSON.stringify(config, null, 2), "utf-8");
     } catch (error) {
-      console.error(`写入配置文件失败 ${path}:`, error);
+      console.error(`写入配置文件失败 ${path}:`, error instanceof Error ? error.message : String(error));
       throw error;
     }
   }

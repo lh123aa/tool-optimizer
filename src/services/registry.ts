@@ -10,7 +10,8 @@
  * - 请求缓存
  */
 
-import axios, { AxiosInstance, AxiosError } from "axios";
+import type { AxiosInstance} from "axios";
+import axios, { AxiosError } from "axios";
 import type { ToolCandidate, SearchFilter } from "../types/index.js";
 import { REGISTRY_API_BASE, REGISTRY_API_TIMEOUT_MS, REGISTRY_CACHE_TTL_MS } from "../utils/constants.js";
 
@@ -193,7 +194,7 @@ export class RegistryService {
           `${API_PREFIX}/servers`,
           { params }
         );
-        return response.data.servers.map(this.mapToCandidate);
+        return response.data.servers.map((s) => this.mapToCandidate(s));
       },
       async () => this.fallbackGitHubSearch(filter, limit),
       "搜索"
@@ -237,7 +238,7 @@ export class RegistryService {
           `${API_PREFIX}/servers/popular`,
           { params: { limit } }
         );
-        return response.data.servers.map(this.mapToCandidate);
+        return response.data.servers.map((s) => this.mapToCandidate(s));
       },
       async () => this.fallbackGitHubSearch({ sortBy: "stars" }, limit),
       "获取热门服务器"
@@ -253,7 +254,7 @@ export class RegistryService {
         const response = await this.client.get<string[]>(`${API_PREFIX}/categories`);
         return response.data;
       },
-      async () => this.getDefaultCategories(),
+      () => Promise.resolve(this.getDefaultCategories()),
       "获取分类列表"
     );
   }
@@ -326,7 +327,7 @@ export class RegistryService {
         }
       );
 
-      return response.data.items.map(this.mapGitHubToCandidate);
+      return response.data.items.map((item) => this.mapGitHubToCandidate(item));
     } catch (error) {
       console.error("GitHub 搜索后备失败:", error);
       return [];
@@ -342,7 +343,7 @@ export class RegistryService {
       const response = await this.githubClient.get(
         `/repos/${encodeURIComponent(name)}`
       );
-      return this.mapGitHubRepoToCandidate(response.data);
+      return this.mapGitHubRepoToCandidate(response.data as Parameters<typeof this.mapGitHubRepoToCandidate>[0]);
     } catch (error) {
       console.error(`GitHub 获取 ${name} 详情失败:`, error);
       return null;
